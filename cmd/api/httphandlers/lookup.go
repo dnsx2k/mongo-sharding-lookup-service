@@ -1,15 +1,18 @@
 package httphandlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/dnsx2k/mongo-sharding-lookup-service/pkg/dto"
 	"github.com/gin-gonic/gin"
 	lru "github.com/hashicorp/golang-lru"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type HTTPHandlerContext struct {
-	cache *lru.Cache
+	cache      *lru.Cache
+	collection *mongo.Collection
 }
 
 // Setup - setup for HTTP gin handler
@@ -19,8 +22,8 @@ func (sc *HTTPHandlerContext) Setup(route gin.IRouter) {
 }
 
 // New - factory function for HTTP lookup handler
-func New(cache *lru.Cache) *HTTPHandlerContext {
-	return &HTTPHandlerContext{cache: cache}
+func New(cache *lru.Cache, collection *mongo.Collection) *HTTPHandlerContext {
+	return &HTTPHandlerContext{cache: cache, collection: collection}
 }
 
 func (sc *HTTPHandlerContext) handleGet(gCtx *gin.Context) {
@@ -44,7 +47,21 @@ func (sc *HTTPHandlerContext) handlePost(gCtx *gin.Context) {
 		return
 	}
 
-	//TODO: Save to DB
+	persistIn := make([]interface{}, 0)
+	for i := range newLookupEntry.Keys {
+		persistIn = append(persistIn, map[string]string{
+			"key":      newLookupEntry.Keys[i],
+			"location": newLookupEntry.Location,
+		})
+
+		sc.cache.Add(newLookupEntry.Keys[i], newLookupEntry.Location)
+	}
+
+	_, err := sc.collection.InsertMany(context.Background(), persistIn, nil)
+	if err != nil {
+		gCtx.JSON(http.StatusInternalServerError, err)
+		return
+	}
 
 	gCtx.Status(http.StatusOK)
 }
