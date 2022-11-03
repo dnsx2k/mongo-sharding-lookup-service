@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/dnsx2k/mongo-sharding-lookup-service/cmd/api/httphandlers"
@@ -59,4 +62,15 @@ func main() {
 			panic(err)
 		}
 	}()
+
+	// Graceful HTTP shutdown
+	signalChan := make(chan os.Signal)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	<-signalChan
+	signal.Stop(signalChan)
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	_ = server.Shutdown(ctx)
 }
