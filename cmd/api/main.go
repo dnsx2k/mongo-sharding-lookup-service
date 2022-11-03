@@ -14,9 +14,14 @@ import (
 )
 
 func main() {
+	cfg, err := LoadConfig()
+	if err != nil {
+		panic(err)
+	}
+
 	ctx := context.Background()
-	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
-	collection := mongoClient.Database("lookup").Collection("lookup")
+	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.MongoDBConnectionString))
+	collection := mongoClient.Database("customSharding").Collection("lookups")
 
 	cursor, err := collection.Find(ctx, nil)
 	if err != nil {

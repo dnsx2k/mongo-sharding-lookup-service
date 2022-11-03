@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/hashicorp/golang-lru v0.5.4
+	github.com/kelseyhightower/envconfig v1.4.0
 	go.mongodb.org/mongo-driver v1.10.3
 )
 
