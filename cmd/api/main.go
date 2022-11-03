@@ -12,6 +12,7 @@ import (
 	"github.com/dnsx2k/mongo-sharding-lookup-service/pkg/dto"
 	"github.com/gin-gonic/gin"
 	lru "github.com/hashicorp/golang-lru"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -24,9 +25,12 @@ func main() {
 
 	ctx := context.Background()
 	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.MongoDBConnectionString))
+	if err != nil {
+		panic(err)
+	}
 	collection := mongoClient.Database("customSharding").Collection("lookups")
 
-	cursor, err := collection.Find(ctx, nil)
+	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
 		panic(err)
 	}
