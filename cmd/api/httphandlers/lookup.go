@@ -7,6 +7,7 @@ import (
 	"github.com/dnsx2k/mongo-sharding-lookup-service/pkg/dto"
 	"github.com/gin-gonic/gin"
 	lru "github.com/hashicorp/golang-lru"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -19,6 +20,7 @@ type HTTPHandlerContext struct {
 func (sc *HTTPHandlerContext) Setup(route gin.IRouter) {
 	route.GET("lookup/:key", sc.handleGet)
 	route.POST("lookup", sc.handlePost)
+	route.DELETE("lookup", sc.handleDelete)
 }
 
 // New - factory function for HTTP lookup handler
@@ -61,6 +63,26 @@ func (sc *HTTPHandlerContext) handlePost(gCtx *gin.Context) {
 	if err != nil {
 		gCtx.JSON(http.StatusInternalServerError, err)
 		return
+	}
+
+	gCtx.Status(http.StatusOK)
+}
+
+func (sc *HTTPHandlerContext) handleDelete(gCtx *gin.Context) {
+	var payload map[string]interface{}
+	if err := gCtx.BindJSON(&payload); err != nil {
+		gCtx.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	keys := payload["keys"].([]string)
+	_, err := sc.collection.DeleteMany(context.Background(), bson.M{"id": bson.M{"$in": keys}})
+	if err != nil {
+		gCtx.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	for i := range keys {
+		sc.cache.Remove(keys[i])
 	}
 
 	gCtx.Status(http.StatusOK)
