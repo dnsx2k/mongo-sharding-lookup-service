@@ -20,6 +20,7 @@ type HTTPHandlerContext struct {
 func (sc *HTTPHandlerContext) Setup(route gin.IRouter) {
 	route.GET("lookup/:key", sc.handleGet)
 	route.POST("lookup", sc.handlePost)
+	route.POST("domainLookup", sc.handlePostDomain)
 	route.DELETE("lookup", sc.handleDelete)
 }
 
@@ -43,7 +44,7 @@ func (sc *HTTPHandlerContext) handleGet(gCtx *gin.Context) {
 }
 
 func (sc *HTTPHandlerContext) handlePost(gCtx *gin.Context) {
-	var newLookupEntry dto.LookupBatch
+	var newLookupEntry dto.LookupKeyBatch
 	if err := gCtx.BindJSON(&newLookupEntry); err != nil {
 		gCtx.JSON(http.StatusBadRequest, err)
 		return
@@ -60,6 +61,25 @@ func (sc *HTTPHandlerContext) handlePost(gCtx *gin.Context) {
 	}
 
 	_, err := sc.collection.InsertMany(context.Background(), persistIn, nil)
+	if err != nil {
+		gCtx.JSON(http.StatusInternalServerError, err)
+		return
+	}
+
+	gCtx.Status(http.StatusOK)
+}
+
+func (sc *HTTPHandlerContext) handlePostDomain(gCtx *gin.Context) {
+	var newDomainLookupEntry dto.LookupDomain
+	if err := gCtx.BindJSON(&newDomainLookupEntry); err != nil {
+		gCtx.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	sc.cache.Add(newDomainLookupEntry.Domain, newDomainLookupEntry.Location)
+
+	persistIn := bson.M{"domain": newDomainLookupEntry.Domain, "location": newDomainLookupEntry.Location}
+	_, err := sc.collection.InsertOne(context.Background(), persistIn, nil)
 	if err != nil {
 		gCtx.JSON(http.StatusInternalServerError, err)
 		return
