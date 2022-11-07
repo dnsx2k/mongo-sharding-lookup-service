@@ -5,12 +5,7 @@ type Lookup struct {
 	Location string `json:"location"`
 }
 
-type LookupKeyBatch struct {
+type LookupBatch struct {
 	Keys     []string `json:"keys"`
 	Location string   `json:"location"`
-}
-
-type LookupDomain struct {
-	Domain   string `json:"domain"`
-	Location string `json:"location"`
 }
